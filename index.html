@@ -170,7 +170,7 @@ $("fx").onclick=async()=>{
 };
 
 // Autenticação e dados em tempo real
-$("go").onclick=()=>signInWithEmailAndPassword(auth,$("em").value,$("pw").value).catch(()=>$("err").textContent="Email ou palavra-passe incorrectos.");
+$("go").onclick=()=>signInWithEmailAndPassword(auth,$("em").value,$("pw").value).catch(e=>$("err").textContent="Erro: "+e.code);
 $("pw").onkeydown=e=>{if(e.key==="Enter")$("go").click()};
 $("out").onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async u=>{
