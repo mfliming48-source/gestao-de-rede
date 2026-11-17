@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestão de Rede</title>
+<style>
+:root{--bg:#eef1f0;--sf:#fff;--tx:#17211f;--mt:#5d6b67;--ln:#d3dbd8;--ac:#0b6b5c;--ok:#2e9e5b;--off:#d64545;--un:#aab4b0}
+@media(prefers-color-scheme:dark){:root{--bg:#121816;--sf:#1a2220;--tx:#e6ede9;--mt:#93a29c;--ln:#2c3835;--ac:#3fbfa8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 "Segoe UI",system-ui,sans-serif}
+h1,h2{font-family:Georgia,serif;font-weight:600;margin:0}
+h2{font-size:17px;margin-bottom:10px}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;background:var(--sf);border-bottom:1px solid var(--ln)}
+main{max-width:1180px;margin:0 auto;padding:18px}
+section{background:var(--sf);border:1px solid var(--ln);border-radius:6px;padding:16px;margin-bottom:16px}
+button,input,select,textarea{font:inherit;color:var(--tx);background:var(--sf);border:1px solid var(--ln);border-radius:4px;padding:7px 10px}
+button{cursor:pointer}button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ac)}
+.stats{display:flex;gap:12px;flex-wrap:wrap}
+.stat{flex:1;min-width:120px;border-left:4px solid var(--ln);padding:4px 12px}
+.stat b{display:block;font-size:26px;font-family:Georgia,serif}.stat span{color:var(--mt)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.bar input{flex:1;min-width:160px}
+#map{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px}
+.c{border:1px solid var(--ln);border-radius:3px;text-align:center;font-size:12px;padding:6px 0;cursor:pointer;background:var(--sf)}
+.c.a{background:var(--ok);color:#fff;border-color:var(--ok)}.c.o{background:var(--off);color:#fff;border-color:var(--off)}.c.u{background:var(--un);color:#000}
+.c.x{outline:2px dashed #e0a100;outline-offset:-2px}
+.leg{display:flex;gap:14px;flex-wrap:wrap;color:var(--mt);font-size:13px;margin-top:10px}
+.leg i{display:inline-block;width:11px;height:11px;border-radius:2px;border:1px solid var(--ln);margin-right:5px;vertical-align:-1px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--ln);white-space:nowrap}th{color:var(--mt);font-weight:600}
+.tag{padding:2px 8px;border-radius:10px;font-size:12px;color:#fff}
+.t-activo{background:var(--ok)}.t-offline{background:var(--off)}.t-desconhecido{background:var(--un);color:#000}
+.warn{color:#b97f00;font-size:12px}
+dialog{border:1px solid var(--ln);border-radius:6px;background:var(--sf);color:var(--tx);width:min(420px,92vw)}
+dialog label{display:block;margin:8px 0 2px;color:var(--mt);font-size:13px}dialog input,dialog select,dialog textarea{width:100%}
+#login{max-width:340px;margin:12vh auto;padding:22px}#login input{width:100%;margin:6px 0}
+.hide{display:none!important}#err{color:var(--off);min-height:20px}
+</style>
+</head>
+<body>
+<div id="login" class="hide"><section>
+<h1>Gestão de Rede</h1><p style="color:var(--mt)">Entre com a sua conta para ver a rede.</p>
+<input id="em" type="email" placeholder="Email" autocomplete="username">
+<input id="pw" type="password" placeholder="Palavra-passe" autocomplete="current-password">
+<button class="p" id="go" style="width:100%">Entrar</button><p id="err"></p></section></div>
+
+<div id="app" class="hide">
+<header><h1>Rede <span id="pre"></span>x</h1><div><span id="who" style="color:var(--mt);margin-right:10px"></span><button id="out">Sair</button></div></header>
+<main>
+<section><div class="stats" id="stats"></div></section>
+<section><h2>Mapa de IPs</h2><div class="bar"><select id="rs"></select><button class="adm" id="nr">Nova sub-rede</button><button class="adm" id="fx">Editar faixas</button></div><div id="map"></div>
+<div class="leg"><span><i style="background:var(--ok)"></i>Activo</span><span><i style="background:var(--off)"></i>Offline</span><span><i style="background:var(--un)"></i>Desconhecido</span><span><i></i>Livre</span><span><i style="border:2px dashed #e0a100"></i>Fora da faixa</span></div></section>
+<section><h2>Equipamentos</h2>
+<div class="bar"><input id="q" placeholder="Pesquisar IP, nome, local…"><select id="ft"></select><select id="fe"><option value="">Todos os estados</option><option>activo</option><option>offline</option><option>desconhecido</option></select>
+<button class="p adm" id="add">Novo equipamento</button><button class="adm" id="imp">Importar CSV</button><button id="exp">Exportar CSV</button><input type="file" id="file" accept=".csv" class="hide"></div>
+<div class="tw"><table><thead><tr><th>IP</th><th>Nome</th><th>Tipo</th><th>Local</th><th>Estado</th><th>Verificado</th><th></th></tr></thead><tbody id="tb"></tbody></table></div></section>
+<section><h2>Histórico recente</h2><div id="hist" style="color:var(--mt);font-size:14px"></div></section>
+</main></div>
+
+<dialog id="dlg"><form method="dialog" id="fm">
+<h2 id="dt">Equipamento</h2>
+<label>Último número do IP (2–253)</label><input id="f-ip" type="number" min="2" max="253" required>
+<label>Nome</label><input id="f-nome" required>
+<label>Tipo</label><select id="f-tipo"></select>
+<label>Local</label><input id="f-local">
+<label>Estado</label><select id="f-estado"><option>activo</option><option>offline</option><option>desconhecido</option></select>
+<label>Notas</label><textarea id="f-notas" rows="2"></textarea>
+<div style="display:flex;gap:8px;margin-top:14px"><button class="p" id="sv" type="button">Guardar</button><button type="button" id="cc">Cancelar</button><button type="button" id="rm" style="margin-left:auto;color:var(--off)">Apagar</button></div>
+</form></dialog>
+
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import{getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import{getFirestore,collection,onSnapshot,doc,setDoc,deleteDoc,addDoc,getDoc,query,orderBy,limit,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// 1) COLE AQUI a configuração do seu projecto Firebase (Definições do projecto > As suas apps > Web)
+const CFG={apiKey:"COLE_AQUI_A_SUA_apiKey",authDomain:"gestao-de-rede-b2b7d.firebaseapp.com",projectId:"gestao-de-rede-b2b7d",appId:"1:186389230886:web:eed199c229fdb247a3fde7"};
+let PREFIX="192.168.135.";
+let FAIXAS=[];const DEF_FAIXAS=[[2,100,"Câmara"],[101,106,"Impressora"],[107,112,"PABX"],[113,118,"Switch/AP"],[120,133,"Refeitório/Biometria/WC"],[134,200,"IP estático"],[201,240,"DHCP"],[241,253,"Livre"]];
+const TIPOS=["Câmara","Impressora","PABX","Switch/AP","Refeitório/Biometria/WC","IP estático","PC","Outro"];
+const faixa=n=>(FAIXAS.find(f=>n>=f[0]&&n<=f[1])||[])[2]||"";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const app=initializeApp(CFG),auth=getAuth(app),db=getFirestore(app);
+let eq={},redes={},rede="",all=[],admin=false,user=null,unsubs=[];
+$("pre").textContent=PREFIX;
+for(const id of["f-tipo"])$(id).innerHTML=TIPOS.map(t=>`<option>${t}</option>`).join("");
+$("ft").innerHTML='<option value="">Todos os tipos</option>'+TIPOS.map(t=>`<option>${t}</option>`).join("");
+
+const fora=e=>{const f=faixa(e.n);return f&&f!=="Livre"&&f!=="DHCP"&&f!=="IP estático"&&e.tipo!==f};
+
+function render(){
+ const L=Object.values(eq),a=L.filter(e=>e.estado==="activo").length,o=L.filter(e=>e.estado==="offline").length,x=L.filter(fora).length;
+ $("stats").innerHTML=[["Registados",L.length,""],["Activos",a,"var(--ok)"],["Offline",o,"var(--off)"],["Livres",252-L.length,"var(--ln)"],["Fora da faixa",x,"#e0a100"]]
+  .map(s=>`<div class="stat" style="border-color:${s[2]||"var(--ac)"}"><b>${s[1]}</b><span>${s[0]}</span></div>`).join("");
+ let m="";for(let n=2;n<=253;n++){const e=eq[n];m+=`<div class="c ${e?(e.estado==="activo"?"a":e.estado==="offline"?"o":"u"):""} ${e&&fora(e)?"x":""}" data-n="${n}" title="${PREFIX}${n}${e?" — "+esc(e.nome):" (livre)"}">${n}</div>`}
+ $("map").innerHTML=m;
+ const q=$("q").value.toLowerCase(),t=$("ft").value,s=$("fe").value;
+ const rows=L.filter(e=>(!t||e.tipo===t)&&(!s||e.estado===s)&&(PREFIX+e.n+" "+e.nome+" "+e.local+" "+e.notas).toLowerCase().includes(q)).sort((a,b)=>a.n-b.n);
+ $("tb").innerHTML=rows.length?rows.map(e=>`<tr><td>${PREFIX}${e.n}</td><td>${esc(e.nome)}${fora(e)?` <span class="warn">fora da faixa de ${esc(faixa(e.n))}</span>`:""}</td><td>${esc(e.tipo)}</td><td>${esc(e.local)}</td><td><span class="tag t-${e.estado}">${e.estado}</span></td><td>${e.verificado?new Date(e.verificado.seconds*1e3).toLocaleString("pt-PT"):"—"}</td><td>${admin?`<button data-n="${e.n}">Editar</button>`:""}</td></tr>`).join(""):'<tr><td colspan="7" style="color:var(--mt)">Nenhum equipamento encontrado. Use “Novo equipamento” ou importe um CSV.</td></tr>';
+}
+function abrir(n){
+ if(!admin)return;const e=eq[n]||{};
+ $("dt").textContent=e.nome?"Editar "+PREFIX+n:"Novo equipamento";
+ $("f-ip").value=n||"";$("f-ip").readOnly=!!e.nome;$("f-nome").value=e.nome||"";$("f-tipo").value=e.tipo||faixa(n)||"Outro";
+ if(![...$("f-tipo").options].some(o=>o.value===$("f-tipo").value))$("f-tipo").value="Outro";
+ $("f-local").value=e.local||"";$("f-estado").value=e.estado||"desconhecido";$("f-notas").value=e.notas||"";
+ $("rm").classList.toggle("hide",!e.nome);$("dlg").showModal();
+}
+async function log(n,acao){await addDoc(collection(db,"historico"),{ip:PREFIX+n,acao,por:user.email,ts:serverTimestamp()})}
+async function guardar(n,d,acao){const id=(eq[n]||{})._id||rede.replace(/\./g,"-")+"_"+n;await setDoc(doc(db,"equipamentos",id),{n,rede,...d},{merge:true});await log(n,acao)}
+$("sv").onclick=async()=>{
+ const n=+$("f-ip").value;if(!(n>=2&&n<=253)||!$("f-nome").value.trim())return alert("Indique um IP entre 2 e 253 e um nome.");
+ const novo=!eq[n];
+ await guardar(n,{nome:$("f-nome").value.trim(),tipo:$("f-tipo").value,local:$("f-local").value.trim(),estado:$("f-estado").value,notas:$("f-notas").value.trim()},novo?"criado":"editado");
+ $("dlg").close();
+};
+$("rm").onclick=async()=>{const n=+$("f-ip").value;if(confirm("Apagar "+PREFIX+n+"?")){await deleteDoc(doc(db,"equipamentos",eq[n]._id));await log(n,"apagado");$("dlg").close()}};
+$("cc").onclick=()=>$("dlg").close();
+$("add").onclick=()=>{const l=[];for(let n=2;n<=253;n++)if(!eq[n]){l.push(n);break}abrir(l[0])};
+$("map").onclick=e=>{const n=e.target.dataset.n;if(n){if(admin)abrir(+n);else if(eq[n])alert(PREFIX+n+"\n"+eq[n].nome+"\n"+eq[n].local)}};
+$("tb").onclick=e=>{if(e.target.dataset.n)abrir(+e.target.dataset.n)};
+["q","ft","fe"].forEach(id=>$(id).oninput=render);
+
+// Exportar / importar CSV (no Excel: Guardar como > CSV)
+$("exp").onclick=()=>{
+ const r=[["ip","nome","tipo","local","estado","notas"],...[...all].sort((a,b)=>a.rede.localeCompare(b.rede)||a.n-b.n).map(e=>[e.rede+"."+e.n,e.nome,e.tipo,e.local,e.estado,e.notas])];
+ const csv=r.map(l=>l.map(c=>'"'+String(c??"").replace(/"/g,'""')+'"').join(";")).join("\r\n");
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv"}));a.download="redes.csv";a.click();
+};
+$("imp").onclick=()=>$("file").click();
+$("file").onchange=async ev=>{
+ const f=ev.target.files[0];if(!f)return;const lines=(await f.text()).replace(/^\ufeff/,"").split(/\r?\n/).filter(Boolean);
+ const sep=lines[0].includes(";")?";":",";let ok=0,bad=[];
+ for(const ln of lines.slice(1)){
+  const c=ln.split(sep).map(x=>x.replace(/^"|"$/g,"").trim());const p=(c[0]||"").split(".");const n=+p.pop();const r=p.length===3?p.join("."):rede;
+  if(!(n>=2&&n<=253)||!c[1]||!/^\d{1,3}(\.\d{1,3}){2}$/.test(r)){bad.push(c[0]||"(vazio)");continue}
+  const est=["activo","offline"].includes((c[4]||"").toLowerCase())?c[4].toLowerCase():"desconhecido";
+  const old=all.find(e=>e.rede===r&&e.n===n);await setDoc(doc(db,"equipamentos",old?old._id:r.replace(/\./g,"-")+"_"+n),{n,rede:r,nome:c[1],tipo:c[2]||faixa(n)||"Outro",local:c[3]||"",estado:est,notas:c[5]||""},{merge:true});ok++;if(!(r in redes)){redes[r]={nome:r,faixas:[]};await setDoc(doc(db,"redes",r.replace(/\./g,"-")),{prefixo:r,nome:r,faixas:[]})}
+ }
+ await log(0,`importação CSV: ${ok} linhas`);alert(`Importados: ${ok}.`+(bad.length?`\nIgnorados (IP inválido ou sem nome): ${bad.join(", ")}`:""));ev.target.value="";
+};
+
+// Sub-redes
+function opts(){
+ const ks=[...new Set([...Object.keys(redes),...all.map(e=>e.rede)])].sort();
+ if(!ks.includes(rede))rede=ks[0]||"192.168.135";
+ $("rs").innerHTML=(ks.length?ks:[rede]).map(k=>`<option value="${k}" ${k===rede?"selected":""}>${esc((redes[k]||{}).nome||"Rede")} — ${k}.x</option>`).join("");
+ FAIXAS=((redes[rede]||{}).faixas||[]).map(f=>[f.de,f.ate,f.tipo]);
+ PREFIX=rede+".";$("pre").textContent=PREFIX;
+ eq={};all.filter(e=>e.rede===rede).forEach(e=>eq[e.n]=e);
+ const T=[...new Set([...TIPOS,...FAIXAS.map(f=>f[2]),...Object.values(eq).map(e=>e.tipo)])],cv=$("ft").value;
+ $("f-tipo").innerHTML=T.map(t=>`<option>${esc(t)}</option>`).join("");
+ $("ft").innerHTML='<option value="">Todos os tipos</option>'+T.map(t=>`<option>${esc(t)}</option>`).join("");$("ft").value=cv;
+ render();
+}
+$("rs").onchange=()=>{rede=$("rs").value;opts()};
+$("nr").onclick=async()=>{
+ const p=(prompt("Prefixo da sub-rede (3 primeiros números), ex.: 192.168.136")||"").trim();if(!p)return;
+ if(!/^\d{1,3}(\.\d{1,3}){2}$/.test(p))return alert("Formato inválido. Exemplo: 192.168.136");
+ const nome=prompt("Nome da sub-rede (ex.: Filial Beira)")||p;rede=p;
+ await setDoc(doc(db,"redes",p.replace(/\./g,"-")),{prefixo:p,nome,faixas:[]});
+};
+$("fx").onclick=async()=>{
+ const v=prompt("Faixas de "+rede+".x — formato 2-100:Câmara, 101-106:Impressora (vazio = sem faixas)",FAIXAS.map(f=>`${f[0]}-${f[1]}:${f[2]}`).join(", "));if(v===null)return;
+ const fx=[];for(const p of v.split(",")){const m=p.trim().match(/^(\d+)-(\d+):(.+)$/);if(m)fx.push({de:+m[1],ate:+m[2],tipo:m[3].trim()})}
+ await setDoc(doc(db,"redes",rede.replace(/\./g,"-")),{prefixo:rede,nome:(redes[rede]||{}).nome||rede,faixas:fx});
+};
+
+// Autenticação e dados em tempo real
+$("go").onclick=()=>signInWithEmailAndPassword(auth,$("em").value,$("pw").value).catch(()=>$("err").textContent="Email ou palavra-passe incorrectos.");
+$("pw").onkeydown=e=>{if(e.key==="Enter")$("go").click()};
+$("out").onclick=()=>signOut(auth);
+onAuthStateChanged(auth,async u=>{
+ unsubs.forEach(f=>f());unsubs=[];user=u;
+ $("login").classList.toggle("hide",!!u);$("app").classList.toggle("hide",!u);if(!u)return;
+ admin=(await getDoc(doc(db,"admins",u.uid))).exists();
+ $("who").textContent=u.email+(admin?" (admin)":" (leitura)");
+ document.querySelectorAll(".adm").forEach(b=>b.classList.toggle("hide",!admin));
+ unsubs.push(onSnapshot(collection(db,"redes"),s=>{
+  redes={};s.forEach(d=>{const v=d.data();redes[v.prefixo]=v});
+  if(s.empty&&admin)setDoc(doc(db,"redes","192-168-135"),{prefixo:"192.168.135",nome:"Rede principal",faixas:DEF_FAIXAS.map(f=>({de:f[0],ate:f[1],tipo:f[2]}))});
+  opts()}));
+ unsubs.push(onSnapshot(collection(db,"equipamentos"),s=>{all=[];s.forEach(d=>{const v=d.data();v._id=d.id;v.rede=v.rede||"192.168.135";all.push(v)});opts()}));
+ unsubs.push(onSnapshot(query(collection(db,"historico"),orderBy("ts","desc"),limit(15)),s=>{
+  $("hist").innerHTML=s.docs.map(d=>{const v=d.data();return`<div>${v.ts?new Date(v.ts.seconds*1e3).toLocaleString("pt-PT"):"agora"} — ${esc(v.ip)} ${esc(v.acao)} <span style="opacity:.7">(${esc(v.por)})</span></div>`}).join("")||"Sem registos ainda."}));
+});
+</script>
+</body>
+</html>
